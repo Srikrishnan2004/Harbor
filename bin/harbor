@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Harbor CLI launcher. Runs the TypeScript entrypoint via tsx.
+# Resolves symlinks so it works when linked onto PATH (pnpm link / ln -s).
+set -euo pipefail
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  LINKDIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$LINKDIR/$SOURCE"
+done
+DIR="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
+exec "$DIR/node_modules/.bin/tsx" "$DIR/engine/src/cli/index.ts" "$@"

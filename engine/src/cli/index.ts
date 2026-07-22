@@ -712,7 +712,8 @@ program
     heading("Usage" + (opts.since ? ` (last ${opts.since})` : ""));
     console.log(
       `  ${report.totals.calls} calls · ${c(errPct ? "yellow" : "green", errPct + "% errors")} · ` +
-        `${formatBytes(report.totals.bytes)} · ${report.totals.instances} instances`,
+        `${formatBytes(report.totals.bytes)} · ~${report.totals.estTokens.toLocaleString()} tokens ${dim("(est)")} · ` +
+        `${report.totals.instances} instances`,
     );
 
     heading("By instance");
@@ -722,10 +723,11 @@ program
         String(i.calls),
         i.errors ? c("yellow", String(i.errors)) : dim("0"),
         formatBytes(i.bytes),
+        dim("~" + i.estTokens.toLocaleString()),
         i.avgMs != null ? `${i.avgMs}ms` : dim("—"),
         i.lastUsed ? dim(new Date(i.lastUsed).toLocaleString()) : dim("—"),
       ]),
-      { head: ["instance", "calls", "errors", "bytes", "avg", "last used"] },
+      { head: ["instance", "calls", "errors", "bytes", "~tokens", "avg", "last used"] },
     );
 
     if (report.topTools.length) {

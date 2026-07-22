@@ -126,13 +126,14 @@ export interface InstanceUsage {
   denied: number;
   blocked: number;
   bytes: number;
+  estTokens: number;
   avgMs: number | null;
   lastUsed: string | null;
   topTools: Array<{ tool: string; calls: number }>;
 }
 export interface UsageReport {
   since: string | null;
-  totals: { calls: number; ok: number; errors: number; bytes: number; instances: number };
+  totals: { calls: number; ok: number; errors: number; bytes: number; estTokens: number; instances: number };
   instances: InstanceUsage[];
   topTools: Array<{ instance: string; tool: string; calls: number }>;
   byClient: Array<{ client: string; calls: number }>;

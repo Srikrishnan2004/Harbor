@@ -39,6 +39,7 @@ describe("computeUsage", () => {
     expect(r.totals.calls).toBe(6);
     expect(r.totals.errors).toBe(2); // 1 denied + 1 blocked
     expect(r.totals.bytes).toBe(650);
+    expect(r.totals.estTokens).toBe(Math.ceil(650 / 4)); // ~4 chars/token heuristic
     expect(r.totals.instances).toBe(2);
 
     // Sorted by calls desc → supabase-prod first (4 calls).
@@ -49,6 +50,7 @@ describe("computeUsage", () => {
     expect(prod.errors).toBe(1);
     expect(prod.denied).toBe(1);
     expect(prod.bytes).toBe(450);
+    expect(prod.estTokens).toBe(Math.ceil(450 / 4));
     expect(prod.avgMs).toBe(20); // (10+30+20)/3
     expect(prod.topTools[0]).toEqual({ tool: "query", calls: 2 });
 

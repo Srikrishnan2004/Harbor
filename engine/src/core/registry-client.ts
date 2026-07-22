@@ -44,8 +44,17 @@ export interface RegistryServer {
 }
 
 async function getJson(path: string): Promise<any> {
-  const res = await fetch(registryBase() + path, { signal: AbortSignal.timeout(15_000) });
-  if (!res.ok) throw new Error(`registry ${path} → ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(registryBase() + path, { signal: AbortSignal.timeout(20_000) });
+  } catch (e: any) {
+    const msg = String(e?.message ?? e);
+    if (/timeout|aborted|timed out/i.test(msg)) {
+      throw new Error("The MCP registry didn't respond — it may be temporarily down. Try again shortly.");
+    }
+    throw new Error(`Can't reach the MCP registry: ${msg}`);
+  }
+  if (!res.ok) throw new Error(`The MCP registry returned an error (${res.status}). Try again shortly.`);
   return res.json();
 }
 

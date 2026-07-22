@@ -14,6 +14,8 @@ export interface InstanceUsage {
   denied: number;
   blocked: number;
   bytes: number; // sum of result sizes
+  /** Rough estimate (~4 chars/token) of tokens the results add to model context. */
+  estTokens: number;
   avgMs: number | null;
   lastUsed: string | null;
   topTools: Array<{ tool: string; calls: number }>;
@@ -21,10 +23,20 @@ export interface InstanceUsage {
 
 export interface UsageReport {
   since: string | null;
-  totals: { calls: number; ok: number; errors: number; bytes: number; instances: number };
+  totals: { calls: number; ok: number; errors: number; bytes: number; estTokens: number; instances: number };
   instances: InstanceUsage[];
   topTools: Array<{ instance: string; tool: string; calls: number }>;
   byClient: Array<{ client: string; calls: number }>;
+}
+
+/**
+ * Rough token estimate from byte count (~4 chars/token). Deliberately a
+ * heuristic, not a real tokenizer: Harbor is model-agnostic (results feed
+ * whatever model the client uses), and an accurate count would need a
+ * per-call provider API. Surfaced everywhere as an explicit estimate.
+ */
+export function estimateTokens(bytes: number): number {
+  return Math.ceil(bytes / 4);
 }
 
 const UNITS: Record<string, number> = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
@@ -98,6 +110,7 @@ export function computeUsage(opts: UsageOptions = {}): UsageReport {
       denied,
       blocked,
       bytes,
+      estTokens: estimateTokens(bytes),
       avgMs: durN ? Math.round(durSum / durN) : null,
       lastUsed,
       topTools: topTools.slice(0, 5),
@@ -114,6 +127,7 @@ export function computeUsage(opts: UsageOptions = {}): UsageReport {
       ok: instances.reduce((n, i) => n + i.ok, 0),
       errors: instances.reduce((n, i) => n + i.errors, 0),
       bytes: instances.reduce((n, i) => n + i.bytes, 0),
+      estTokens: instances.reduce((n, i) => n + i.estTokens, 0),
       instances: instances.length,
     },
     instances,

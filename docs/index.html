@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Harbor — one place to store, credential, and switch MCP servers</title>
+    <meta name="description" content="Harbor is a local gateway + desktop app for Model Context Protocol servers. Define a server once, give it many credential sets, bundle instances into profiles, and switch across every AI client — Claude Code, Codex, Gemini CLI, Antigravity — in one keystroke." />
+    <meta property="og:title" content="Harbor — MCP servers, one gateway, every client" />
+    <meta property="og:description" content="Multi-credential instances, profiles, and one-keystroke switching across every MCP client — without ever touching a config file again." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>" />
+    <style>
+      @font-face {
+        font-family: "Geist";
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+        src: url("https://cdn.jsdelivr.net/fontsource/fonts/geist:vf@latest/latin-wght-normal.woff2") format("woff2-variations");
+      }
+      @font-face {
+        font-family: "Geist Mono";
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+        src: url("https://cdn.jsdelivr.net/fontsource/fonts/geist-mono:vf@latest/latin-wght-normal.woff2") format("woff2-variations");
+      }
+
+      :root {
+        --bg: #000;
+        --card: #0a0a0a;
+        --card2: #101010;
+        --fg: #ededed;
+        --muted: #a1a1a1;
+        --faint: #6b6b6b;
+        --border: rgba(255, 255, 255, 0.11);
+        --border2: rgba(255, 255, 255, 0.16);
+        --blue: #3b82f6;
+        --red: #ef4444;
+        --green: #22c55e;
+        --sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--sans);
+        line-height: 1.5;
+        letter-spacing: -0.006em;
+      }
+      a { color: inherit; text-decoration: none; }
+      .wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+      code, pre, .mono { font-family: var(--mono); }
+
+      /* Nav */
+      nav {
+        position: sticky; top: 0; z-index: 20;
+        border-bottom: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(12px);
+      }
+      nav .row { display: flex; align-items: center; gap: 16px; height: 56px; }
+      nav .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+      nav .brand .sep { color: var(--border2); }
+      nav .brand .tag { color: var(--muted); font-weight: 400; font-size: 14px; }
+      nav .links { margin-left: auto; display: flex; align-items: center; gap: 22px; font-size: 14px; color: var(--muted); }
+      nav .links a:hover { color: var(--fg); }
+      .btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        height: 34px; padding: 0 14px; border-radius: 8px;
+        font-size: 14px; font-weight: 500; border: 1px solid var(--border2);
+        transition: background 0.15s, border-color 0.15s;
+      }
+      .btn.primary { background: #fff; color: #000; border-color: #fff; }
+      .btn.primary:hover { background: #e5e5e5; }
+      .btn.ghost:hover { background: #141414; border-color: #2a2a2a; }
+
+      /* Hero */
+      header.hero { padding: 96px 0 72px; text-align: center; position: relative; overflow: hidden; }
+      .hero .glow {
+        position: absolute; inset: -40% 0 auto 0; height: 480px; z-index: 0;
+        background: radial-gradient(60% 60% at 50% 0%, rgba(59, 130, 246, 0.14), transparent 70%);
+        pointer-events: none;
+      }
+      .hero .inner { position: relative; z-index: 1; }
+      .pill {
+        display: inline-flex; align-items: center; gap: 8px; margin-bottom: 22px;
+        padding: 5px 12px; border: 1px solid var(--border); border-radius: 999px;
+        font-size: 12.5px; color: var(--muted); background: var(--card);
+      }
+      .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+      h1 {
+        font-size: clamp(38px, 6vw, 60px); font-weight: 600;
+        letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 20px;
+      }
+      h1 .grad { background: linear-gradient(180deg, #fff, #9a9a9a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .hero p.lead { max-width: 680px; margin: 0 auto 30px; font-size: clamp(16px, 2.2vw, 19px); color: var(--muted); }
+      .hero .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+      /* Terminal card */
+      .term {
+        max-width: 720px; margin: 44px auto 0; text-align: left;
+        border: 1px solid var(--border); border-radius: 12px; background: var(--card);
+        overflow: hidden;
+      }
+      .term .bar { display: flex; align-items: center; gap: 7px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+      .term .bar i { width: 11px; height: 11px; border-radius: 50%; background: #333; display: inline-block; }
+      .term .bar span { margin-left: 8px; font-size: 12px; color: var(--faint); font-family: var(--mono); }
+      .term pre { padding: 18px 16px; font-size: 13px; line-height: 1.75; overflow-x: auto; color: #d4d4d4; }
+      .term .c1 { color: var(--faint); } /* comment */
+      .term .c2 { color: #7dd3fc; }       /* command */
+      .term .c3 { color: var(--green); }  /* ok */
+      .term .c4 { color: #fca5a5; }       /* prod */
+
+      /* Sections */
+      section { padding: 64px 0; border-top: 1px solid var(--border); }
+      .eyebrow { font-size: 12.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--blue); margin-bottom: 12px; }
+      h2 { font-size: clamp(26px, 4vw, 34px); font-weight: 600; letter-spacing: -0.02em; margin-bottom: 14px; }
+      section > .wrap > p.sub { max-width: 640px; color: var(--muted); font-size: 16px; margin-bottom: 36px; }
+
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+      .feat {
+        border: 1px solid var(--border); border-radius: 12px; background: var(--card);
+        padding: 20px; transition: border-color 0.15s, background 0.15s;
+      }
+      .feat:hover { border-color: var(--border2); background: var(--card2); }
+      .feat .ic { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; font-size: 18px; border: 1px solid var(--border); margin-bottom: 14px; }
+      .feat h3 { font-size: 15.5px; font-weight: 600; margin-bottom: 6px; }
+      .feat p { font-size: 13.5px; color: var(--muted); }
+
+      /* Problem list */
+      .prob { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+      .prob .item { border-left: 2px solid var(--red); padding: 4px 0 4px 16px; }
+      .prob .item b { display: block; margin-bottom: 3px; font-weight: 600; font-size: 14.5px; }
+      .prob .item span { color: var(--muted); font-size: 13.5px; }
+
+      /* Diagram */
+      .diagram {
+        border: 1px solid var(--border); border-radius: 12px; background: var(--card);
+        padding: 8px; overflow-x: auto;
+      }
+      .diagram pre { font-size: 12px; line-height: 1.35; color: var(--muted); padding: 14px; white-space: pre; }
+
+      /* Steps */
+      .steps { display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: start; }
+      @media (max-width: 820px) { .steps { grid-template-columns: 1fr; } }
+      .steps ol { list-style: none; counter-reset: s; display: grid; gap: 18px; }
+      .steps li { counter-increment: s; display: flex; gap: 14px; }
+      .steps li::before {
+        content: counter(s); flex: none; width: 26px; height: 26px; border-radius: 50%;
+        border: 1px solid var(--border2); display: grid; place-items: center;
+        font-size: 13px; font-family: var(--mono); color: var(--muted);
+      }
+      .steps li b { font-weight: 600; }
+      .steps li p { color: var(--muted); font-size: 14px; margin-top: 2px; }
+      .steps li code { background: var(--card2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 12.5px; }
+      pre.block {
+        border: 1px solid var(--border); border-radius: 12px; background: var(--card);
+        padding: 18px 16px; font-size: 13px; line-height: 1.7; overflow-x: auto; color: #d4d4d4;
+      }
+      pre.block .cm { color: var(--faint); }
+
+      /* Clients */
+      .clients { display: flex; flex-wrap: wrap; gap: 12px; }
+      .client { display: flex; align-items: center; gap: 9px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); padding: 10px 16px; font-size: 14px; }
+      .client .d { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+      .tag2 { display: inline-block; font-size: 11px; font-family: var(--mono); color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 1px 7px; }
+
+      footer { border-top: 1px solid var(--border); padding: 40px 0; color: var(--faint); font-size: 13.5px; }
+      footer .row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+      footer a:hover { color: var(--fg); }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="wrap row">
+        <div class="brand">
+          <span>⚓</span> Harbor <span class="sep">/</span> <span class="tag">MCP gateway</span>
+        </div>
+        <div class="links">
+          <a href="#features">Features</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#start">Get started</a>
+          <a class="btn ghost" href="https://github.com/Srikrishnan2004/Harbor" target="_blank" rel="noopener">GitHub</a>
+        </div>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div class="glow"></div>
+      <div class="wrap inner">
+        <div class="pill"><span class="dot"></span> One gateway · every AI client</div>
+        <h1>
+          <span class="grad">Store, credential, and switch<br />MCP servers everywhere.</span>
+        </h1>
+        <p class="lead">
+          Harbor is a local gateway + desktop app for your Model Context Protocol servers. Define a server once,
+          give it as many credential sets as you need, bundle them into profiles, and apply a profile to any
+          project across Claude Code, Codex, Gemini CLI &amp; Antigravity — in one keystroke, without ever touching
+          a config file again.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="#start">Get started</a>
+          <a class="btn ghost" href="https://github.com/Srikrishnan2004/Harbor" target="_blank" rel="noopener">View source →</a>
+        </div>
+
+        <div class="term">
+          <div class="bar"><i></i><i></i><i></i><span>~/code/my-app</span></div>
+<pre><span class="c1"># one server, many identities</span>
+<span class="c2">$ harbor add supabase --id supabase-prod --production</span>
+<span class="c2">$ harbor add supabase --id supabase-staging</span>
+
+<span class="c1"># bundle into a profile, bind it to a project</span>
+<span class="c2">$ harbor profile create app-dev</span>
+<span class="c2">$ harbor profile add app-dev supabase-staging github-work</span>
+<span class="c2">$ harbor bind ~/code/my-app app-dev</span>
+
+<span class="c1"># switch live — no client restart</span>
+<span class="c2">$ harbor profile use app-prod-debug</span>
+<span class="c3">✓</span> Active profile → app-prod-debug   <span class="c4">⚠ touches PRODUCTION</span></pre>
+        </div>
+      </div>
+    </header>
+
+    <!-- Problem -->
+    <section id="problem">
+      <div class="wrap">
+        <div class="eyebrow">The problem</div>
+        <h2>MCP config is fragmented and manual.</h2>
+        <p class="sub">Every client stores servers its own way, assumes a single identity per server, and re-does auth from scratch.</p>
+        <div class="prob">
+          <div class="item"><b>Config lives in N places</b><span><code>~/.claude.json</code>, <code>.mcp.json</code>, <code>~/.codex/config.toml</code>, <code>~/.gemini/settings.json</code> — each with its own schema.</span></div>
+          <div class="item"><b>One server, one identity</b><span>Prod, staging, and a client's instance mean juggling env vars or duplicated blocks — and hoping you don't hit prod by mistake.</span></div>
+          <div class="item"><b>Auth is repeated everywhere</b><span>OAuth flows and tokens get redone per client, and tokens end up in plaintext JSON on disk.</span></div>
+          <div class="item"><b>Switching is manual</b><span><code>/mcp</code>, <code>claude mcp add …</code>, re-auth, restart the client. Every single time.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features">
+      <div class="wrap">
+        <div class="eyebrow">What Harbor does</div>
+        <h2>Instances, profiles, one gateway.</h2>
+        <p class="sub">Harbor is a gateway, not a config-file editor. Each client is pointed at Harbor once; Harbor decides what's behind the door.</p>
+        <div class="grid">
+          <div class="feat"><div class="ic">📚</div><h3>Server library</h3><p>Every MCP server you've configured, in one catalog with search, tags, and health status.</p></div>
+          <div class="feat"><div class="ic">🎭</div><h3>Multiple instances</h3><p>The same server type with different credentials and scopes — <span class="tag2">supabase-prod</span> <span class="tag2">supabase-staging</span> — as first-class, visually distinct entries.</p></div>
+          <div class="feat"><div class="ic">🗂️</div><h3>Profiles</h3><p>Named bundles of instances. Apply one to a project or client in a single action.</p></div>
+          <div class="feat"><div class="ic">🔀</div><h3>Live switching</h3><p>Switch profiles and the tool set changes instantly — no config rewriting, no client restart.</p></div>
+          <div class="feat"><div class="ic">🔐</div><h3>Credential vault</h3><p>OS keychain–backed storage. Auth once, reuse everywhere. Tokens never sit in a JSON blob.</p></div>
+          <div class="feat"><div class="ic">🔗</div><h3>Cross-client sync</h3><p>Claude Code, Codex, Gemini CLI, Antigravity — all fed from one source of truth.</p></div>
+          <div class="feat"><div class="ic">🔑</div><h3>OAuth flows</h3><p>Full PKCE authorization for remote servers; tokens stored in the vault and refreshed silently.</p></div>
+          <div class="feat"><div class="ic">🛡️</div><h3>Tool policy &amp; safety</h3><p>Read-only instances, per-tool allow/deny, confirm-write gates, and filesystem scoping — enforced at the gateway.</p></div>
+          <div class="feat"><div class="ic">📊</div><h3>Usage analytics</h3><p>Per-instance calls, error rate, bytes, and latency — the full audit log of every upstream tool call.</p></div>
+          <div class="feat"><div class="ic">📁</div><h3>Folder awareness</h3><p>Scan a directory tree to see which projects declare which servers, and where they conflict — then reconcile in one click.</p></div>
+          <div class="feat"><div class="ic">🧩</div><h3>Registry install</h3><p>Search the MCP registry and install a server into your library, credentials and all.</p></div>
+          <div class="feat"><div class="ic">👥</div><h3>Team manifests</h3><p>Ship a references-only <code>harbor.yaml</code>; a teammate runs <code>harbor sync</code> and brings their own credentials.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture -->
+    <section id="architecture">
+      <div class="wrap">
+        <div class="eyebrow">Architecture</div>
+        <h2>A gateway, not a config editor.</h2>
+        <p class="sub">Each client talks to Harbor once. Behind it, the union of the active profile's instances — namespaced, credential-injected, safety-filtered, and audited.</p>
+        <div class="diagram">
+<pre>┌──────────────┐  ┌──────────┐  ┌────────────┐  ┌─────────────┐
+│ Claude Code  │  │  Codex   │  │ Gemini CLI │  │ Antigravity │
+└──────┬───────┘  └────┬─────┘  └─────┬──────┘  └──────┬──────┘
+       └───────────────┴──────┬───────┴────────────────┘
+                              │  MCP (stdio / SSE / HTTP)
+                              ▼
+                  ┌───────────────────────┐
+                  │    Harbor Gateway     │
+                  │  resolver · namespacer │
+                  │  cred injector · audit │
+                  └───────────┬───────────┘
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+┌───────────────┐   ┌──────────────┐   ┌──────────────────┐
+│ supabase-prod │   │ github-work  │   │ postgres-staging │
+└───────────────┘   └──────────────┘   └──────────────────┘
+                              │
+                   ┌──────────┴──────────┐
+                   │  OS Keychain vault  │
+                   └─────────────────────┘</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Get started -->
+    <section id="start">
+      <div class="wrap">
+        <div class="eyebrow">Get started</div>
+        <h2>Point clients at Harbor once.</h2>
+        <p class="sub">After setup, every change happens in Harbor — no client config is ever touched again.</p>
+        <div class="steps">
+          <ol>
+            <li><div><b>Install</b><p>Clone the repo and install dependencies with <code>pnpm</code>.</p></div></li>
+            <li><div><b>Wire up your clients</b><p><code>harbor setup --all</code> adds a single gateway entry to each detected client.</p></div></li>
+            <li><div><b>Add &amp; credential a server</b><p><code>harbor add supabase …</code> then <code>harbor auth</code> — secrets go straight to the OS keychain.</p></div></li>
+            <li><div><b>Bundle &amp; switch</b><p>Group instances into a profile and <code>harbor profile use</code> — live in every client.</p></div></li>
+          </ol>
+<pre class="block"><span class="cm"># clone &amp; install</span>
+git clone https://github.com/Srikrishnan2004/Harbor
+cd Harbor &amp;&amp; pnpm install
+
+<span class="cm"># connect every detected client (once, ever)</span>
+./bin/harbor setup --all
+
+<span class="cm"># add a server, store its secret in the keychain</span>
+./bin/harbor add supabase --id supabase-staging \
+  --label "Supabase (staging)" --color yellow
+./bin/harbor auth supabase-staging
+
+<span class="cm"># bundle into a profile and activate it live</span>
+./bin/harbor profile create app-dev
+./bin/harbor profile add app-dev supabase-staging
+./bin/harbor profile use app-dev
+
+<span class="cm"># optional: the desktop control panel</span>
+pnpm build:ui &amp;&amp; ./bin/harbor daemon   <span class="cm"># http://127.0.0.1:4747</span></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Clients -->
+    <section id="clients">
+      <div class="wrap">
+        <div class="eyebrow">Works with</div>
+        <h2>Every MCP client, one source of truth.</h2>
+        <p class="sub">Adapters register a single Harbor entry per client — surgical, reversible, and about 100 lines to add a new one.</p>
+        <div class="clients">
+          <div class="client"><span class="d"></span> Claude Code</div>
+          <div class="client"><span class="d"></span> Codex</div>
+          <div class="client"><span class="d"></span> Gemini CLI</div>
+          <div class="client"><span class="d"></span> Antigravity</div>
+          <div class="client" style="color: var(--muted)">+ your client — an adapter is ~100 lines</div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap row">
+        <span>⚓ Harbor</span>
+        <span>·</span>
+        <a href="https://github.com/Srikrishnan2004/Harbor" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/Srikrishnan2004/Harbor/blob/main/docs/IMPLEMENTATION.md" target="_blank" rel="noopener">Design doc</a>
+        <a href="https://github.com/Srikrishnan2004/Harbor#readme" target="_blank" rel="noopener">README</a>
+        <span style="margin-left: auto">MIT · TypeScript engine · React + Tauri UI</span>
+      </div>
+    </footer>
+  </body>
+</html>
